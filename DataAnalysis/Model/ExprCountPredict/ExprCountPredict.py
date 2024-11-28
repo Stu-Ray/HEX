@@ -21,8 +21,8 @@ from tensorflow.keras.layers import Conv1D, Flatten, Dense, MultiHeadAttention, 
 parm_factor = 1
 epoch_num = 1000
 
-v_file_path     =   '../Output/vectors.csv'  # 向量文件路径
-output_vec_path =   '../Output/processed_vectors.csv'  # 指定处理后的向量文件路径
+v_file_path     =   '../../Output/vectors.csv'  # 向量文件路径
+output_vec_path =   '../../Output/processed_vectors.csv'  # 指定处理后的向量文件路径
 
 save_models = False
 
@@ -53,10 +53,7 @@ def row_predict(vec_file_path):
 
     # 去除重复数据
     columns_to_consider = [col for col in data.columns if col not in drop_columns]
-    before_rows = data.shape[0]
     data = data.drop_duplicates(subset=columns_to_consider, keep='first')
-    after_rows = data.shape[0]
-    print(f"去除了 {before_rows - after_rows} 行重复数据。")
 
     # 提取标签
     labels = data['表达式次数模式']  # 表达式计数作为输出
@@ -182,8 +179,6 @@ def row_predict(vec_file_path):
             if predict_choice <= 0:
                 predict_choice = 0
             predicted_num = predict_list[predict_choice]
-            # predict_list = []
-            # predicted_num = int(y_pred[i][0])
             real_num = expr_count[int(split_factor*len(features))+i]
             totalNum = totalNum + 1
 

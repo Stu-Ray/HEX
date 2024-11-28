@@ -21,13 +21,13 @@ from tensorflow.keras.layers import Conv1D, Flatten, Dense, MultiHeadAttention, 
 parm_factor = 1
 epoch_num = 1000
 
-tv_file_path        =   '../Output/time_vectors.csv'                # 向量数据文件路径
+tv_file_path        =   '../../Output/time_vectors.csv'                # 向量数据文件路径
 
 factor_file_path    =   './Factor/factors.csv'                      # EEOP因子文件
 
-tv1_file_path       =   '../Output/time_vectors1.csv'               # 向量数据文件1路径
-tv2_file_path       =   '../Output/time_vectors2.csv'               # 向量数据文件2路径
-output_vec_path     =   '../Output/processed_vectors_time.csv'      # 指定处理后的向量文件路径
+tv1_file_path       =   '../../Output/time_vectors1.csv'               # 向量数据文件1路径
+tv2_file_path       =   '../../Output/time_vectors2.csv'               # 向量数据文件2路径
+output_vec_path     =   '../../Output/processed_vectors_time.csv'      # 指定处理后的向量文件路径
 
 save_models = False
 

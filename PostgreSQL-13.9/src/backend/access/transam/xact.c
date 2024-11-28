@@ -193,7 +193,6 @@ typedef struct TransactionStateData
 	int			parallelModeLevel;	/* Enter/ExitParallelMode counter */
 	bool		chain;				/* start a new block after this one */
 	struct TransactionStateData *parent;			/* back link to parent */
-	VirtualTransactionId virtualTransactionId;   	/* #RAIN - virtual transaction ID */
 } TransactionStateData;
 
 typedef TransactionStateData *TransactionState;
@@ -6082,36 +6081,3 @@ xact_redo(XLogReaderState *record)
 	else
 		elog(PANIC, "xact_redo: unknown op code %u", info);
 }
-
-
-/************************* #RAIN : PC3 TRANSACTION PREDICTION ************************/
-
-void 
-AbortTxnForSSN(void)
-{
-	TransactionState s = CurrentTransactionState;
-	
-	if (s->chain)
-		SaveTransactionCharacteristics();
-	
-	AbortTransaction();
-	CleanupTransaction();
-	
-	s->blockState = TBLOCK_DEFAULT;
-	if (s->chain)
-	{
-		StartTransaction();
-		s->blockState = TBLOCK_INPROGRESS;
-		s->chain = false;
-		RestoreTransactionCharacteristics();
-	}
-}
-
-VirtualTransactionId getVirtualXid(void)
-{
-	TransactionState s = CurrentTransactionState;
-	VirtualTransactionId vxid = s->virtualTransactionId;		
-	return vxid;
-}
-
-/*************************************************************************************/

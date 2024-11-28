@@ -31,7 +31,7 @@ install: all installdirs
 # These headers are needed by the public headers of the interfaces.
 	$(INSTALL_DATA) $(srcdir)/postgres_ext.h   '$(DESTDIR)$(includedir)'
 	$(INSTALL_DATA) $(srcdir)/libpq/libpq-fs.h '$(DESTDIR)$(includedir)/libpq'
-	$(INSTALL_DATA) $(srcdir)/pccc/pccc.h '$(DESTDIR)$(includedir)/pccc'
+	$(INSTALL_DATA) $(srcdir)/hex/hex.h '$(DESTDIR)$(includedir)/pccc'
 	$(INSTALL_DATA) pg_config.h     '$(DESTDIR)$(includedir)'
 	$(INSTALL_DATA) pg_config_ext.h '$(DESTDIR)$(includedir)'
 	$(INSTALL_DATA) pg_config_os.h  '$(DESTDIR)$(includedir)'

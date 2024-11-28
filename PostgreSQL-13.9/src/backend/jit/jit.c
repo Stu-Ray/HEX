@@ -30,11 +30,6 @@
 
 #include "nodes/nodes.h"
 
-/************************* #RAIN : PC3 ************************/
-bool		ssn 		= 	false;
-bool		s2pl 		= 	false;
-bool 		boolPrint 	= 	false;
-
 /* GUCs */
 bool		jit_enabled = true;
 char	   *jit_provider = NULL;

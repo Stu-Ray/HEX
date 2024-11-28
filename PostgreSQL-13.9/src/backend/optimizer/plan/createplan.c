@@ -528,7 +528,6 @@ create_plan_recurse(PlannerInfo *root, Path *best_path, int flags)
 	if(best_path->parent)
 	{
 		plan->input_rows	=	best_path->parent->tuples;
-		// printf("%s: %.0lf\n", getNodeTagName(best_path->parent->type), best_path->parent->tuples);
 		plan->input_width	=	(int)(best_path->parent->pages * 8192 / best_path->parent->tuples);
 	}
 	// --------------------------------- #RAIN --------------------------------- 

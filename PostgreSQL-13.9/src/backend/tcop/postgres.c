@@ -43,6 +43,9 @@
 #include "catalog/pg_type.h"
 #include "commands/async.h"
 #include "commands/prepare.h"
+#include "executor/execExpr.h"
+#include "hex/hex.h"
+#include "fmgr.h"
 #include "jit/jit.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
@@ -50,6 +53,7 @@
 #include "mb/pg_wchar.h"
 #include "mb/stringinfo_mb.h"
 #include "miscadmin.h"
+#include "nodes/nodes.h"
 #include "nodes/print.h"
 #include "optimizer/optimizer.h"
 #include "parser/analyze.h"
@@ -80,11 +84,6 @@
 #include "utils/snapmgr.h"
 #include "utils/timeout.h"
 #include "utils/timestamp.h"
-
-#include "executor/execExpr.h"
-#include "nodes/nodes.h"
-#include "fmgr.h"
-#include "pccc/pccc.h"
 
 // ---------------------------------- #RAIN ---------------------------------- 
 
@@ -259,15 +258,7 @@ static void enable_statement_timeout(void);
 static void disable_statement_timeout(void);
 
 
-/************************* #RAIN : PC3 TRANSACTION PREDICTION CACHE ************************/
-
-extern VirtualTransactionId getVirtualXid(void);
-
-bool
-equalVXID(VirtualTransactionId vxid1, VirtualTransactionId vxid2)
-{
-	return (vxid1.backendId == vxid2.backendId && vxid1.localTransactionId == vxid2.localTransactionId) ? true:false;
-}
+/*-------------------------------- #RAIN --------------------------------*/
 
 int 
 getSqlStatementType(const char* query_string_sql) 
@@ -351,277 +342,6 @@ getSqlStatementType(const char* query_string_sql)
 		free(firstWord);
         return CMD_NOTHING;
     }
-}
-
-
-int 
-addNewTransactionToPool(VirtualTransactionId current_vxid)
-{
-	TransactionWorkingSet* ptr_txn = transactionPool->headNode;
-	
-	int hash_new_index = (7 * current_vxid.backendId + 11 * current_vxid.localTransactionId) % TXN_SIZE;
-	
-	int txn_index = hash_new_index;
-
-	int k = 0;
-
-	while(transactionPool->transactions[txn_index]->vxid.backendId > 0 && transactionPool->transactions[txn_index]->vxid.localTransactionId > 0)
-	{
-		if( equalVXID(current_vxid, transactionPool->transactions[txn_index]->vxid) )
-		{
-			return txn_index;
-		}
-
-		txn_index++;
-
-		if(txn_index == TXN_SIZE)
-		{
-			txn_index = 0;
-		}	
-		
-		if(txn_index == hash_new_index)
-		{
-			if(boolPrint) 
-			{
-				printf("\n ------[Pid: %d] REPORT Error: Transaction Pool Full!----- \n", MyProcPid);
-			}
-			return -1;
-		}
-	}
-	
-	if( transactionPool->transactions[txn_index]->vxid.backendId <= 0 || transactionPool->transactions[txn_index]->vxid.localTransactionId <= 0 )
-	{
-		transactionPool->transactions[txn_index]->vxid					=	current_vxid;		
-		transactionPool->transactions[txn_index]->workingset.inputSize	=	0;
-		transactionPool->transactions[txn_index]->workingset.outputSize	=	0;
-		transactionPool->transactions[txn_index]->begin_time			=	time(NULL);
-		
-		if(equalVXID(current_vxid, transactionPool->transactions[txn_index]->vxid))
-		{
-			while(ptr_txn->next)
-				ptr_txn = ptr_txn->next;
-			ptr_txn->next = transactionPool->transactions[txn_index];
-			return txn_index;
-		}
-		else 
-		{
-			if(boolPrint) 
-			{
-				printf("\n ------ [Pid: %d] REPORT: Error in (vxid[i] != current_vxid), vxid[i] = %d/%d ----- \n", MyProcPid,  transactionPool->transactions[txn_index]->vxid.backendId, transactionPool->transactions[txn_index]->vxid.localTransactionId);
-			}
-				
-			return -1;	
-		}
-	}
-
-	return -1;
-}
-
-void 
-removeTransactionFromPool(VirtualTransactionId current_vxid)
-{
-	TransactionWorkingSet* ptr_txn = transactionPool->headNode;
-
-	LWLockAcquire(&transactionPool->lock, LW_EXCLUSIVE);
-	while(ptr_txn->next)
-	{
-		if(equalVXID(current_vxid,  ptr_txn->next->vxid))
-		{
-			ptr_txn->next->vxid.backendId = InvalidBackendId;
-			ptr_txn->next->vxid.localTransactionId = InvalidLocalTransactionId;
-			TransactionWorkingSet*	temp_ptr	=	ptr_txn->next;
-			ptr_txn->next = ptr_txn->next->next;
-			temp_ptr->next	=	NULL;
-			break;
-		}
-		ptr_txn = ptr_txn->next;
-	}
-	LWLockRelease(&transactionPool->lock);
-}
-
-void 
-addCommitTxnToPool(int index, VirtualTransactionId vxid)
-{
-	if( commitTxnPool->commitTxn[index]->vxid.backendId <= 0 || commitTxnPool->commitTxn[index]->vxid.localTransactionId <= 0 )
-	{
-		LWLockAcquire(&commitTxnPool->writeLock, LW_EXCLUSIVE);
-		commitTxnPool->commitTxn[index]->vxid					=	vxid;
-		commitTxnPool->commitTxn[index]->committed				=	false;
-		commitTxnPool->commitTxn[index]->conflicts->inCount		=	0;
-		commitTxnPool->commitTxn[index]->conflicts->outCount	=	0;
-		LWLockRelease(&commitTxnPool->writeLock);
-	}
-}
-
-void 
-updateCommitTimeForSSN(int index, VirtualTransactionId vxid, time_t commit_time, bool isInConflict)
-{
-	if( equalVXID(commitTxnPool->commitTxn[index]->vxid, vxid) )
-	{
-		if(isInConflict)
-		{
-			commitTxnPool->commitTxn[index]->conflicts->minOutTime = commitTxnPool->commitTxn[index]->conflicts->minOutTime > commit_time ? commit_time : commitTxnPool->commitTxn[index]->conflicts->minOutTime;
-		}
-		else 
-		{
-			commitTxnPool->commitTxn[index]->conflicts->minOutTime = commitTxnPool->commitTxn[index]->conflicts->maxInTime < commit_time ? commit_time : commitTxnPool->commitTxn[index]->conflicts->maxInTime;
-		}
-	}
-}
-
-void 
-commitTxnInPool(int index, VirtualTransactionId vxid)
-{
-	if( equalVXID(commitTxnPool->commitTxn[index]->vxid, vxid) )
-	{
-		commitTxnPool->commitTxn[index]->committed	=	true;
-		commitTxnPool->commitTxn[index]->commitTime	=	time(NULL);
-
-		VirtualTransactionId	temp_vxid;
-		int inCount = commitTxnPool->commitTxn[index]->conflicts->inCount;
-		int outCount = commitTxnPool->commitTxn[index]->conflicts->outCount;
-		
-		for(int i=0; i<inCount; i++)
-		{
-			temp_vxid = commitTxnPool->commitTxn[index]->conflicts->inConflicts[i].source_vxid;
-			updateCommitTimeForSSN(index, temp_vxid, commitTxnPool->commitTxn[index]->commitTime, true);
-		}
-
-		for(int j=0; j<outCount; j++)
-		{
-			temp_vxid = commitTxnPool->commitTxn[index]->conflicts->outConflicts[j].destination_vxid;
-			updateCommitTimeForSSN(index, temp_vxid, commitTxnPool->commitTxn[index]->commitTime, false);
-		}
-
-	}
-	
-}
-
-void 
-addConflictRecord(VirtualTransactionId source, VirtualTransactionId destination, ConflictType type)
-{	
-	int index1 	= 	(source.backendId * 7 + source.localTransactionId * 11) % TXN_SIZE;
-	int temp1	=	index1;
-
-	int index2 	= 	(destination.backendId * 7 + destination.localTransactionId * 11) % TXN_SIZE;
-	int temp2	=	index2;
-
-	while( commitTxnPool->commitTxn[index1]->vxid.backendId > 0 && commitTxnPool->commitTxn[index1]->vxid.localTransactionId > 0 )
-	{
-		if( equalVXID(commitTxnPool->commitTxn[index1]->vxid, source) )
-		{
-			int		count	=	commitTxnPool->commitTxn[index1]->conflicts->outCount;
-			if(count >=0 && count < CONFLICT_SIZE)
-			{
-				commitTxnPool->commitTxn[index1]->conflicts->outConflicts[count].destination_vxid 	= 	destination;
-				commitTxnPool->commitTxn[index1]->conflicts->outConflicts[count].type				=	type;
-				commitTxnPool->commitTxn[index1]->conflicts->outCount++;
-			}
-			break;
-		}
-
-		index1++;
-
-		if(index1 == TXN_SIZE)
-			index1 = 0;
-
-		if(index1 == temp1)
-		{
-			if(boolPrint)
-			{
-				printf("\n-------------[Pid: %d] REPORT ERROR: CommitTxnPool FULL! ------------------\n", MyProcPid);
-			}
-			
-			return;
-		}
-	}
-
-	while( commitTxnPool->commitTxn[index2]->vxid.backendId > 0 && commitTxnPool->commitTxn[index2]->vxid.localTransactionId > 0 )
-	{
-		if( equalVXID(commitTxnPool->commitTxn[index2]->vxid, destination) )
-		{
-			int		count	=	commitTxnPool->commitTxn[index2]->conflicts->inCount;
-			if(count >=0 && count < CONFLICT_SIZE)
-			{
-				commitTxnPool->commitTxn[index2]->conflicts->inConflicts[count].source_vxid 	= 	source;
-				commitTxnPool->commitTxn[index2]->conflicts->inConflicts[count].type			=	type;
-				commitTxnPool->commitTxn[index2]->conflicts->inCount++;
-			}
-			break;
-		}
-
-		index2++;
-
-		if(index2 == TXN_SIZE)
-			index2 = 0;
-
-		if(index2 == temp2)
-		{
-			if(boolPrint)
-			{
-				printf("\n-------------[Pid: %d] REPORT ERROR: CommitTxnPool FULL! ------------------\n", MyProcPid);
-			}
-			return;
-		}
-	}
-
-}
-
-void
-findConflictsForSSN(VirtualTransactionId current_vxid, NewOrderSQLData data)
-{
-	PC3HashKey	current_wokingset;
-	int 	current_size 		= 	0;
-
-	TransactionWorkingSet* ptr_transaction = transactionPool->headNode->next;
-	
-	while(ptr_transaction)
-	{
-		if( !equalVXID( ptr_transaction->vxid, current_vxid) && (ptr_transaction->vxid.backendId > 0) && (ptr_transaction->vxid.localTransactionId > 0) )
-		{
-			current_wokingset 	= 	ptr_transaction->workingset;
-			current_size		=	ptr_transaction->workingset.inputSize	+ 	ptr_transaction->workingset.outputSize;
-			for(int i=0; i<current_size; i++)
-			{
-				if(current_wokingset.workingset[i].hashValue == data.hashValue)
-				{
-					if(current_wokingset.workingset[i].typeid >= 2 && data.typeid >= 2)
-					{
-						addConflictRecord(ptr_transaction->vxid,  current_vxid, Conf_WW);
-					}
-					else if(current_wokingset.workingset[i].typeid == 1 && data.typeid >= 2)
-					{
-						addConflictRecord(ptr_transaction->vxid,  current_vxid, Conf_RW);
-					}
-					else if(current_wokingset.workingset[i].typeid >= 2 && data.typeid == 1)
-					{
-						addConflictRecord(ptr_transaction->vxid,  current_vxid, Conf_WR);
-					}
-				}
-			}
-			
-		}
-		
-		ptr_transaction = ptr_transaction->next;
-	}
-}
-
-bool checkSerialProblemForSSN(int index, VirtualTransactionId vxid)
-{
-	if( equalVXID(commitTxnPool->commitTxn[index]->vxid, vxid) )
-	{
-		if(commitTxnPool->commitTxn[index]->conflicts->maxInTime == 0 || commitTxnPool->commitTxn[index]->conflicts->minOutTime == 0)
-		{
-			return false;
-		}
-			
-		if(commitTxnPool->commitTxn[index]->conflicts->maxInTime >= commitTxnPool->commitTxn[index]->conflicts->minOutTime)
-		{
-			// printf("\n------------- [Pid:%d, VXID:%d/%d] Serial Problem: maxTime = %ld,  minTime =%ld ! -------------", MyProcPid, vxid.backendId, vxid.localTransactionId, commitTxnPool->commitTxn[index]->conflicts->maxInTime, commitTxnPool->commitTxn[index]->conflicts->minOutTime);
-			return true;
-		}
-	}
-	return false;
 }
 
 /* ------------------------------------------------------------------------------ */
@@ -2656,35 +2376,6 @@ exec_bind_message(StringInfo input_message)
 	*/
    	start_xact_command();
 
-	/************************* #RAIN : PC3 TRANSACTION PREDICTION ************************/
-	bool 			typeFlag 			= 	false;
-	const char* 	sql_statement 		= 	psrc->query_string;
-	int 			parmNum 			=	0;
-	int				parmValue[10]; 
-	int				table_id			=	0;
-	int 			type_id 			= 	getSqlStatementType(sql_statement);  // 1select/2update/0commit/-1rollback
-	VirtualTransactionId current_vxid 	= 	getVirtualXid();
-
-
-	if(type_id!=CMD_NOTHING && type_id!=CMD_INSERT && strstr(sql_statement, "bmsql_config") == NULL)
-	{
-		typeFlag = true;
-
-		if(index_current_txn != (7 * current_vxid.backendId + 11 * current_vxid.localTransactionId) % TXN_SIZE) 
-			index_current_txn 	= 	addNewTransactionToPool(current_vxid);
-		
-		if(strstr(sql_statement, "bmsql_district") != NULL)
-			table_id	=	1;
-		else if(strstr(sql_statement, "bmsql_customer") != NULL)
-			table_id	=	2;
-		else if(strstr(sql_statement, "bmsql_item") != NULL)
-			table_id	=	3;
-		else if(strstr(sql_statement, "bmsql_stock") != NULL)
-			table_id	=	4;
-	}
-
-	/**************************************************************************************/
-
    /* Switch back to message context */
    MemoryContextSwitchTo(MessageContext);
 
@@ -2932,15 +2623,6 @@ exec_bind_message(StringInfo input_message)
 			*/
 			params->params[paramno].pflags = PARAM_FLAG_CONST;
 			params->params[paramno].ptype = ptype;
-
-			/* ----------- #RAIN ----------- */
-
-			if(typeFlag && paramno <= numParams-1)
-			{
-				parmValue[parmNum++]	=	pval;
-			}
-			
-			/* ----------------------------- */
 	   }
 
 	   /*
@@ -2956,104 +2638,6 @@ exec_bind_message(StringInfo input_message)
    	}
    	else
 	   params = NULL;
-
-
-	/************************* #RAIN : PC3 TRANSACTION PREDICTION CACHE ************************/
-
-	NewOrderSQLData orderData = {0,0,0,0,0,0,0,0};
-
-	if(typeFlag)
-	{
-		orderData.typeid	=	type_id;
-		orderData.tableid	=	table_id;
-
-		const char* where_pos = strstr(sql_statement, "WHERE");
-
-		if(where_pos != NULL)
-		{
-			bool hasWID = false, hasDID = false, hasCID = false, hasIID = false;
-			hasWID	=	(strstr(where_pos, "w_id") != NULL);
-			hasDID	=	(strstr(where_pos, "d_id") != NULL);
-			hasCID	=	(strstr(where_pos, "c_id") != NULL);
-			hasIID	=	(strstr(where_pos, "i_id") != NULL);
-
-			int temp = hasWID + hasDID + hasCID + hasIID;
-			
-			int num_parm_ids = 0; 
-
-			if(hasWID)
-				num_parm_ids++;
-			if(hasDID)
-				num_parm_ids++;
-			if(hasCID)
-				num_parm_ids++;
-			if(hasIID)
-				num_parm_ids++;
-
-			if(hasWID)
-				orderData.wid	=	parmValue[parmNum-(num_parm_ids--)];
-			if(hasDID)
-				orderData.did	=	parmValue[parmNum-(num_parm_ids--)];
-			if(hasCID)
-				orderData.cid	=	parmValue[parmNum-(num_parm_ids--)];
-			if(hasIID)
-				orderData.iid	=	parmValue[parmNum-(num_parm_ids--)];
-
-		}
-	}
-
-	if(boolPrint)
-	{
-		printf("[Pid:%d, Vxid:%d/%d, Type:%d] Transaction executing: %s.\n", MyProcPid, current_vxid.backendId, current_vxid.localTransactionId, type_id, sql_statement);
-		printf("Parms: ");
-		for(int n=0; n<parmNum; n++)
-		{
-			printf("%d ", parmValue[n]);
-		}
-		printf("\n");
-	}
-	
-	if(ssn && typeFlag)
-	{
-		// COMMIT or ROLLBACK
-		if(type_id <= CMD_UNKNOWN)
-		{
-		   	removeTransactionFromPool(current_vxid);
-			commitTxnInPool(index_current_txn, current_vxid);
-		}
-		// SELECT, UPDATE or DELETE
-		else
-		{
-			if(index_current_txn >= 0)
-			{
-				int 	new_data_index 		= 	transactionPool->transactions[index_current_txn]->workingset.inputSize;
-
-				if(new_data_index == 0)
-				{					
-					addCommitTxnToPool(index_current_txn, current_vxid);
-				}
-
-				transactionPool->transactions[index_current_txn]->workingset.workingset[new_data_index]		=	orderData;
-				transactionPool->transactions[index_current_txn]->workingset.inputSize++;
-				
-				findConflictsForSSN(current_vxid, orderData);
-
-				if(checkSerialProblemForSSN(index_current_txn, current_vxid))
-				{
-					removeTransactionFromPool(current_vxid);
-
-					if(boolPrint)
-					{
-						printf("\n [Pid:%d] Aborting current transaction! \n", MyProcPid);
-					}
-					
-					AbortTxnForSSN(); 
-				}
-			}
-		} 
-	}
-
-	/*********************************************************************************************/
 
 
    /* Done storing stuff in portal's context */

@@ -75,7 +75,6 @@
 #include "storage/spin.h"
 #include "utils/builtins.h"
 
-#include "pccc/pccc.h"
 
 static void *ShmemAllocRaw(Size size, Size *allocated_size);
 

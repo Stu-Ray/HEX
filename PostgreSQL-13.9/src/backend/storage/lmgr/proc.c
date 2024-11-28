@@ -56,8 +56,6 @@
 #include "utils/timeout.h"
 #include "utils/timestamp.h"
 
-#include "pccc/pccc.h"
-
 /* GUC variables */
 int			DeadlockTimeout = 1000;
 int			StatementTimeout = 0;
@@ -1919,155 +1917,26 @@ BecomeLockGroupMember(PGPROC *leader, int pid)
 	return ok;
 }
 
-
-/* --------------------------------------------------------------- */
-/* -----------------------  #RAIN PC3  -------------    ---------- */
-/* --------------------------------------------------------------- */
-
-/* Remove the space at the front and end of a str */
-void 
-trim(char* str) 
-{
-    int len = strlen(str);
-    int start = 0;
-    int end = len - 1;
-
-    while (isspace(str[start])) {
-        start++;
-    }
-
-    while (end >= start && isspace(str[end])) {
-        end--;
-    }
-    
-    memmove(str, str + start, end - start + 1);
-    str[end - start + 1] = '\0';
-}
-
-Size
-TxnPoolShmemSize(void)
-{
-	Size		size;
-	size	=	sizeof(TransactionPool);	
-	size	=   add_size(size, (TXN_SIZE + 1) * sizeof(TransactionWorkingSet));
-	return 		size;
-}
-
-Size
-CommitTxnPoolShmemSize(void)
-{
-	Size		size;
-	size	=	sizeof(CommitTxnPool);	
-	size	=   add_size(size, TXN_SIZE * sizeof(CommitTxn));
-	size	=   add_size(size, TXN_SIZE * sizeof(ConflictRecord));
-	/*
-	size	=   add_size(size, TXN_SIZE * CONFLICT_SIZE * sizeof(InConflictRecord));
-	size	=   add_size(size, TXN_SIZE * CONFLICT_SIZE * sizeof(OutConflictRecord));
-	*/
-	return 		size;
-}
-
-void 
-TransactionPoolInit(void)
-{
-	bool		foundTxnPool;
-	transactionPool = (struct TransactionPool*)ShmemInitStruct("transactionPool", TxnPoolShmemSize(), &foundTxnPool);
-	if(!foundTxnPool)
-	{ 	
-		transactionPool->headNode				=	(TransactionWorkingSet*)ShmemAlloc(sizeof(TransactionWorkingSet));
-		transactionPool->headNode->next			=	NULL;	
-		LWLockInitialize(&transactionPool->lock, LWTRANCHE_BUFFER_CONTENT);
-	
-		for(int i=0; i < TXN_SIZE; i++)
-		{
-			transactionPool->transactions[i]								=	(TransactionWorkingSet*)ShmemAlloc(sizeof(TransactionWorkingSet));
-			transactionPool->transactions[i]->vxid.backendId				= 	InvalidBackendId;
-			transactionPool->transactions[i]->vxid.localTransactionId		= 	InvalidLocalTransactionId;
-			transactionPool->transactions[i]->workingset.inputHash			=	0;
-			transactionPool->transactions[i]->workingset.inputSize			=	0;
-			transactionPool->transactions[i]->workingset.outputHash			=	0;
-			transactionPool->transactions[i]->workingset.outputSize			=	0;
-			for(int j=0; j < MAX_ENTRIES; j++)
-			{
-				memset(&transactionPool->transactions[i]->workingset.workingset[j], 0, sizeof(NewOrderSQLData));
-			}
-			transactionPool->transactions[i]->committed					=	false;
-			transactionPool->transactions[i]->next						=	NULL;
-		}
-	}
-	
-}
-
-void 
-CommitTxnPoolInit(void)
-{
-	bool	foundCommitTxnPool;
-	commitTxnPool = (struct CommitTxnPool*)ShmemInitStruct("commitTxnPool", CommitTxnPoolShmemSize(), &foundCommitTxnPool);
-	if(!foundCommitTxnPool)
-	{ 	
-		for(int i=0; i < TXN_SIZE; i++)
-		{
-			commitTxnPool->commitTxn[i]								=	(CommitTxn*)ShmemAlloc(sizeof(CommitTxn));
-			commitTxnPool->commitTxn[i]->committed 					= 	false;
-			commitTxnPool->commitTxn[i]->vxid.backendId				=	InvalidBackendId;
-			commitTxnPool->commitTxn[i]->vxid.localTransactionId	=	InvalidLocalTransactionId;
-
-			commitTxnPool->commitTxn[i]->conflicts				=	(ConflictRecord*)ShmemAlloc(sizeof(ConflictRecord));
-			commitTxnPool->commitTxn[i]->conflicts->inCount		=	0;
-			commitTxnPool->commitTxn[i]->conflicts->outCount	=	0;
-			/*
-			for(int j=0; j < CONFLICT_SIZE; j++)
-			{
-				commitTxnPool->commitTxn[i]->conflicts->outConflicts[j]	=	(OutConflictRecord*)ShmemAlloc(sizeof(OutConflictRecord));
-				commitTxnPool->commitTxn[i]->conflicts->inConflicts[j]	=	(InConflictRecord*)ShmemAlloc(sizeof(InConflictRecord));
-			}
-			*/
-		}
-	}
-}
-
-/* -------------------------  LATCH  ----------------------------- */
-
 void
 ProcWaitForSharedSignal(uint32 wait_event_info, int pid, long timeout)
 {
-	/*
-	SYSTEMTIME 		currentTime;
-	*/
 	if(MyProc)
 	{
-		/*
-		GetSystemTime(&currentTime);	
-		printf("\n [Pid: %d] Current time 1: %d/%d/%d %d:%d:%d:%d\n", MyProcPid, currentTime.wYear,currentTime.wMonth,currentTime.wDay,(currentTime.wHour+8)%24,currentTime.wMinute,currentTime.wSecond,currentTime.wMilliseconds);
-		*/
 		(void) WaitLatch(&MyProc->procLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, 
 			timeout, wait_event_info);
-		/*
-		GetSystemTime(&currentTime);	
-		printf("\n [Pid: %d] Current time 2: %d/%d/%d %d:%d:%d:%d\n", MyProcPid, currentTime.wYear,currentTime.wMonth,currentTime.wDay,(currentTime.wHour+8)%24,currentTime.wMinute,currentTime.wSecond,currentTime.wMilliseconds);
-		*/
 		ResetLatch(&MyProc->procLatch);
 	}
 	else 
 	{
 		PGPROC *proc = NULL;
 		proc = BackendPidGetProc(pid);
-		/*
-		GetSystemTime(&currentTime);	
-		printf("\n [Pid: %d] Current time 1: %d/%d/%d %d:%d:%d:%d\n", MyProcPid, currentTime.wYear,currentTime.wMonth,currentTime.wDay,(currentTime.wHour+8)%24,currentTime.wMinute,currentTime.wSecond,currentTime.wMilliseconds);
-		*/
 		(void) WaitLatch(&proc->procLatch, WL_LATCH_SET | WL_TIMEOUT | WL_EXIT_ON_PM_DEATH, 
 			timeout, wait_event_info);
-		/*
-		GetSystemTime(&currentTime);	
-		printf("\n [Pid: %d] Current time 2: %d/%d/%d %d:%d:%d:%d\n", MyProcPid, currentTime.wYear,currentTime.wMonth,currentTime.wDay,(currentTime.wHour+8)%24,currentTime.wMinute,currentTime.wSecond,currentTime.wMilliseconds);
-		*/
 		ResetLatch(&proc->procLatch);
 	}
 	
 	CHECK_FOR_INTERRUPTS();
 }
-
 
 
 /* -----------------------  New Function  ----------------------- */

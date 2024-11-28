@@ -2062,8 +2062,6 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		 */
 		current_rel = query_planner(root, standard_qp_callback, &qp_extra);
 
-		// printf("[Current_Rel Rows - query_planner] %lf\n", current_rel->rows); /*#RAIN*/
-
 		/*
 		 * Convert the query's result tlist into PathTarget format.
 		 *
@@ -2216,8 +2214,6 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 				adjust_paths_for_srfs(root, current_rel,
 									  grouping_targets,
 									  grouping_targets_contain_srfs);
-			
-			// printf("[Current_Rel Rows - have_grouping] %lf\n", current_rel->rows); /*#RAIN*/
 		}
 
 
@@ -2239,8 +2235,6 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 				adjust_paths_for_srfs(root, current_rel,
 									  sort_input_targets,
 									  sort_input_targets_contain_srfs);
-
-			// printf("[Current_Rel Rows - activeWindows] %lf\n", current_rel->rows); /*#RAIN*/
 		}
 
 		/*
@@ -2251,8 +2245,6 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 		{
 			current_rel = create_distinct_paths(root,
 												current_rel);
-
-			// printf("[Current_Rel Rows - distinctClause] %lf\n", current_rel->rows); /*#RAIN*/
 		}
 	}							/* end of if (setOperations) */
 
@@ -2276,8 +2268,6 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 			adjust_paths_for_srfs(root, current_rel,
 								  final_targets,
 								  final_targets_contain_srfs);
-
-		// printf("[Current_Rel Rows - sortClause] %lf\n", current_rel->rows); /*#RAIN*/
 	}
 
 	/*
@@ -2403,8 +2393,6 @@ grouping_planner(PlannerInfo *root, bool inheritance_update,
 
 		/* And shove it into final_rel */
 		add_path(final_rel, path);
-
-		// printf("[PATH ROWS - grouping] %lf\n", path->rows); /*#RAIN*/
 	}
 
 	/*

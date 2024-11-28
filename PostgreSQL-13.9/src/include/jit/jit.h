@@ -24,12 +24,6 @@
 #define PGJIT_DEFORM   (1 << 4)
 
 
-/************************* #RAIN : PC3 ************************/
-extern 	bool 	ssn;
-extern	bool	s2pl;
-extern 	bool 	boolPrint;
-
-
 typedef struct JitInstrumentation
 {
 	/* number of emitted functions */

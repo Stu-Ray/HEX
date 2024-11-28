@@ -466,49 +466,35 @@ ExprSteps* add_expression(int step_lens, int* steps)
             exprTypes[tIndex].step_lens         =   step_lens;
             exprTypes[tIndex].hash              =   eHash;
 
-            // if(printJITExpr)
-            // {
-            //     printf("[Add Expr] 表达式编号 %d\n", exprNum);
-
-            //     // printf("[Add Expr] 表达式编号 %d: ", exprNum);
-
-            //     // for(int i=0; i<step_lens; i++)
-            //     // {
-            //     //     printf("%s ", getExprEvalOpNameById(steps[i]));
-            //     // }
-
-            //     // printf("\n");
-            // }
-
             for(int i=0; i<step_lens; i++)
             {
                 exprTypes[tIndex].steps[i]  =   steps[i];
             }
 
-            // const char* eeFilename = "/data/expr_eeops.txt";
+            const char* eeFilename = "/data/expr_eeops.txt";
 
-			// FILE *eeFile = fopen(eeFilename, "a+"); 
+			FILE *eeFile = fopen(eeFilename, "a+"); 
 
-			// if (!eeFile) 
-			// {
-			// 	perror("Failed to open file");
-			// }
-			// else
-			// {	
-            //     if(exprNum != 0)
-            //     {
-            //         fprintf(eeFile, "表达式编号 %d:", exprNum);
+			if (!eeFile) 
+			{
+				perror("Failed to open file");
+			}
+			else
+			{	
+                if(exprNum != 0)
+                {
+                    fprintf(eeFile, "表达式编号 %d:", exprNum);
 
-            //         for(int m=0; m<step_lens; m++)
-            //         {
-            //             fprintf(eeFile, " %s", getExprEvalOpNameById(steps[m]));
-            //         }
+                    for(int m=0; m<step_lens; m++)
+                    {
+                        fprintf(eeFile, " %s", getExprEvalOpNameById(steps[m]));
+                    }
 
-            //         fprintf(eeFile, "\n");
-            //     }
-			// }
+                    fprintf(eeFile, "\n");
+                }
+			}
 
-			// fclose(eeFile);
+			fclose(eeFile);
 
             return &exprTypes[tIndex];
         }

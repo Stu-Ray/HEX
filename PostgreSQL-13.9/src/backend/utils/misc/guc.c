@@ -1956,41 +1956,6 @@ static struct config_bool ConfigureNamesBool[] =
 		NULL, NULL, NULL
 	},
 
-	/************************* #RAIN : PC3 TRANSACTION PREDICTION CACHE ************************/
-
-	{
-		{"ssn", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("Allow SSN, recommend using it under SI."),
-			NULL,
-			GUC_EXPLAIN
-		},
-		&ssn,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"s2pl", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("Allow S2PL, recommend using it under RC."),
-			NULL,
-			GUC_EXPLAIN
-		},
-		&s2pl,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"boolPrint", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("Allow log information to be printed."),
-			NULL,
-			GUC_EXPLAIN
-		},
-		&boolPrint,
-		false,
-		NULL, NULL, NULL
-	},
-
 	/*************************************** #RAIN : ME **************************************/
 	
 	{
@@ -2044,17 +2009,6 @@ static struct config_bool ConfigureNamesBool[] =
 			GUC_EXPLAIN
 		},
 		&printExprLevels,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"printJITExpr", PGC_USERSET, QUERY_TUNING_OTHER,
-			gettext_noop("Allow expression information in JIT to be printed."),
-			NULL,
-			GUC_EXPLAIN
-		},
-		&printJITExpr,
 		false,
 		NULL, NULL, NULL
 	},
@@ -2187,18 +2141,6 @@ static struct config_bool ConfigureNamesBool[] =
 
 static struct config_int ConfigureNamesInt[] =
 {
-	/************************* #RAIN : PC3 TRANSACTION PREDICTION CACHE ************************/
-	{
-		{"kValue", PGC_SUSET, LOCK_MANAGEMENT,
-			gettext_noop("The number of sql statements needed for prediction."),
-			NULL,
-			GUC_UNIT_BYTE
-		},
-		&kValue,
-		2, 1, 6,
-		NULL, NULL, NULL
-	},
-
 	/*************************************** #RAIN : ME **************************************/
 
 	{

@@ -65,10 +65,6 @@ typedef struct ExprState
 	NodeTag		tag;
 
 	uint8		flags;			/* bitmask of EEO_FLAG_* bits, see above */
-
-	// Cost		total_cost;		/*#RAIN*/
-	// int		es_jit_flags;	/*#RAIN*/
-
 	/*
 	 * Storage for result value of a scalar expression, or for individual
 	 * column results within expressions built by ExecBuildProjectionInfo().

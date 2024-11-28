@@ -150,10 +150,7 @@ CreateSharedMemoryAndSemaphores(void)
 		size = add_size(size, BTreeShmemSize());
 		size = add_size(size, SyncScanShmemSize());
 		size = add_size(size, AsyncShmemSize());
-		size = add_size(size, CommitTxnPoolShmemSize());  	/*#RAIN PC3*/
-		size = add_size(size, TxnPoolShmemSize()); 			/*#RAIN PC3*/
-
-		size = add_size(size, ExprSize());					// #RAIN
+		size = add_size(size, ExprSize());
 
 #ifdef EXEC_BACKEND
 		size = add_size(size, ShmemBackendArraySize());
@@ -281,13 +278,6 @@ CreateSharedMemoryAndSemaphores(void)
 	SyncScanShmemInit();
 	AsyncShmemInit();
 
-
-	/************************* #RAIN : PC3 TRANSACTION PREDICTION CACHE ************************/
-	
-	TransactionPoolInit();
-	CommitTxnPoolInit();
-	
-	/******************************************************************************************/
 
 #ifdef EXEC_BACKEND
 

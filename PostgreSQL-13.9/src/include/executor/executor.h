@@ -301,7 +301,7 @@ ExecEvalExpr(ExprState *state,
 			 ExprContext *econtext,
 			 bool *isNull)
 {
-	return state->evalfunc(state, econtext, isNull);   // #RAIN  Expressions (some) executed here
+	return state->evalfunc(state, econtext, isNull);
 }
 #endif
 
