@@ -89,25 +89,29 @@ cd $PG_INSTALL_DIR/bin
 
 ---
 
-As for testing on the workloads, the data and queries for JOB are provided in the repository above. We provide a few scripts for generating data, importing data, creating databases and tables, as well as executing the generated queries for TPC-H in `Workloads/Scripts/TPC-H`. 
+As for testing on the workloads, the data and queries for JOB are provided in the repository above. 
 
-The three scripts for executing TPC-H queries serve for different purposes:
+We provide a few scripts for generating data, importing data, creating databases and tables, as well as executing the generated queries for TPC-H in `Workloads/Scripts/TPC-H`. 
+
+There are three scripts for executing TPC-H queries, serving for different purposes:
 
 - `executeN.sh`: Execute the given query at the given database for the given times. Require 3 params:
   - X: The number of the SQL file (1-22, e.g., for pgX.sql)
   - N: The number of times to repeat the content
   - database_name: The name of the PostgreSQL database
-- `executeAllN.sh`: Execute all the queries (1-22) at all the databases (100 MB-10 GB) for the given times. Require 1 param:
+- `executeAllN.sh`: Execute all the queries (1-22) at all the databases (100 MB-10 GB by default) for the given times. Require 1 param:
   - N: The number of times to repeat the content
-- `executeAll.sh`: Execute all the queries (1-22) at all the databases (100MB-10GB) for the given times. Different execution number for different queries (pre-set in the script). No param required.
+- `executeAll.sh`: Execute all the queries (1-22) at all the databases (100MB-10GB by default) for the given times. Different execution number for different queries (pre-set in the script). No param required.
 
-For example, If I want execute every TPC-H query for 3 times in all the databases (100MB-10GB) PostgreSQL, I could executed the script like:
+For example, If you want to execute every TPC-H query for 3 times in all the databases (100MB-10GB by default) PostgreSQL, you could executed the script like:
 
 ```shell
 cd SCRIPT_PATH/tpch_queires
 
 ./executeAllN.sh 3 >> /data/output.txt   # output.txt is for recording the executing process and avoid printing it on terminal.
 ```
+
+For testing all the queries for 4n times as said in the article, you can use the script `executeN.sh` to set the number of execution for every query.
 
 ---
 
