@@ -22,7 +22,7 @@ The experimental results indicate that:
 
 ### LLVM
 
-This implementation requires the appropriate LLVM version. Use the script `Scripts/install_llvm15.sh` to download and install llvm 15.0.7 for PostgreSQL 13.9: 
+This implementation requires the appropriate LLVM version. Use the script `Scripts/install_llvm15.sh` to download and install LLVM 15.0.7 for PostgreSQL 13.9: 
 
 ```shell
 ./install_llvm15.sh
