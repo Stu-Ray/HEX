@@ -63,9 +63,16 @@ The download links are here below:
 - TPC-H: [TPC Current Specs](https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp)
 - JOB: [gregrahn/join-order-benchmark: Join Order Benchmark (JOB)](https://github.com/gregrahn/join-order-benchmark)
 
+### Baselines
+
+Our experiments compares the HEX method with:
+
+- PostgreSQL: the original expert decision making strategy decides the overall optimization level depending on the total cost of the whole plan tree. 
+- [Quartet](https://codeocean.com/capsule/9528169/tree/v1): a learning-based strategy which can wisely predict the best overall optimization level depending on the cost of each operator in the plan tree. This method is proposed in the article *[Quartet: A Query Aware Database Adaptive Compilation Decision System](https://www.sciencedirect.com/science/article/abs/pii/S0957417423033432)*.
+
 ## Usage
 
-Using the modified PostgreSQL, each query execution can generate related data files in the given directory (in ``/data/`` by default), which can be analyzed using Python scripts and models in `DataAnalysis/`. The data files which can be analyzed include:
+Using the modified PostgreSQL, each query execution can generate related data files in the given directory (in ``/data/`` by default), which can be analyzed using Python scripts and models in `DataAnalysis/HEX/`. The data files which can be analyzed include:
 
 - `report.csv`: one line for one statement, including expression count and the related operator.
 - `jit.csv`: one line for one statement, including all the expression ids and their jit levels.
@@ -73,7 +80,7 @@ Using the modified PostgreSQL, each query execution can generate related data fi
 - `time.csv`: one line for one statement, including all the time information——generation time, inlining time, optimization time, emission time, compilation time, plan time, execution time.
 - `expr_eeops.txt`: one line for one expression, including all the expression ids and the coresponding EEOPs.
 
-Put the files in `DataAnalysis/Data`, change the directory in Python script and you can analyze the information and generate the coresponding vector file for training models.
+Put the files in `DataAnalysis/HEX/Data/`, change the directory in Python script and you can analyze the information and generate the coresponding vector file for training models.
 
 For generating the above files, use the configuration file `Postgresql-13.9/postgresql.conf` to overwrite the original .conf file in `PG_DATA` and then restart the server:
 
