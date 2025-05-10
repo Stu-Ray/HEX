@@ -1,4 +1,4 @@
-# HEX: Expression-Aware Adaptive Hybrid Execution for Analytical Databases (ICDE 2025)
+# HEX: Expression-Aware Adaptive Hybrid Execution for Analytical Databases
 **HEX** is an expression-aware adaptive **H**ybrid **EX**ecution method for analytical databases. This is the official implementation of the paper "HEX: Expression-Aware Adaptive Hybrid Execution for Analytical Databases".
 
 ## Summary
