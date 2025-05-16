@@ -1,11 +1,11 @@
-# exACT: Expression-Aware Adaptive Compilation in Databases
-**exACT** is an expression-aware adaptive hybrid Execution method for analytical databases. This is the official implementation of the paper "exACT: Expression-Aware Adaptive Compilation in Databases".
+# ExACT: Expression-Aware Adaptive Compilation in Databases
+**ExACT** is an expression-aware adaptive hybrid Execution method for analytical databases. This is the official implementation of the paper "exACT: Expression-Aware Adaptive Compilation in Databases".
 
 ## Summary
 
 <img src="https://my-typora-image-host.oss-cn-hangzhou.aliyuncs.com//img/image-20241128164954638.png" alt="image-20241128164954638" style="zoom: 50%;" /> 
 
-Conventional database compilation execution mostly conduct optimization on the whole SQL query level. HEX, instead, applies a new strategy to deal with expression-level optimization. 
+Conventional database compilation execution mostly conduct optimization on the whole SQL query level. ExACT, instead, applies a new strategy to deal with expression-level optimization. 
 
 The artical describes several compilation execution strategies to compete in decision accuracy and query-execution performance in the database for OLAP tasks.
 
@@ -14,7 +14,7 @@ The experimental results indicate that:
 - **PostgreSQL** strategy, whose original expert decision-makeing is a well-performed baseline, widely used as a standard to make optimization decisions according to the overall query costs.
 - **Quartet**, a learning-based execution decision model for databases, further incorporates operator information into its end-to-end learning framework for query compilation decisions. The decision accuracy of Quartet approaches is significantly lower compared to PostgreSQL in some cases.
 - **HEX** represents a transformative approach, optimizing in currently the smallest decision unit (expressions) in the database compilation executor:
-  - **Benchmarking**: In comparisons of decision accuracy, HEX outperformed all the above algorithms across datasets ranging from 0.1GB to 10.0GB.
+  - **Benchmarking**: In comparisons of decision accuracy, ExACT outperformed all the above algorithms across datasets ranging from 0.1GB to 10.0GB.
   - **Performance evaluation**: HEX demonstrated an average performance improvement of approximately 29% compared to PostgreSQL's expert decision execution mode in TPC-H workload of 1GB to 10GB, with a maximum improvement of around 55%.
   - **Generalization ability**: Tests on the JOB dataset indicate that HEX exhibits strong generalization capabilities.
 
