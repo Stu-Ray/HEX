@@ -1,5 +1,5 @@
-# HEX: Expression-Aware Adaptive Hybrid Execution for Analytical Databases
-**HEX** is an expression-aware adaptive **H**ybrid **EX**ecution method for analytical databases. This is the official implementation of the paper "HEX: Expression-Aware Adaptive Hybrid Execution for Analytical Databases".
+# exACT: Expression-Aware Adaptive Compilation in Databases
+**exACT** is an expression-aware adaptive hybrid Execution method for analytical databases. This is the official implementation of the paper "exACT: Expression-Aware Adaptive Compilation in Databases".
 
 ## Summary
 
